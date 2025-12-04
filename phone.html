@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Life OS V9.0 - Mobile Pro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ============================
+           V9.0 核心视觉系统 (保持不变)
+           ============================ */
+        :root {
+            --bg-gradient: linear-gradient(135deg, #fcfafa 0%, #eae1e6 100%);
+            --primary-color: #856f86;  /* 深紫灰 */
+            --accent-color: #af98b4;   /* 烟熏紫 */
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --border-color: rgba(133, 111, 134, 0.15);
+            --text-main: #5e525e;
+            --text-sub: #9e949e;
+            --accent-soft: rgba(175, 152, 180, 0.15);
+            --p1-color: #b57b82; --p2-color: #cfa87a; --p3-color: #8ea0b3; --p0-color: #dcd6da;
+            --success-color: #94a89a;
+            --danger-bg: rgba(181, 123, 130, 0.1);
+            --radius: 16px;
+            --shadow-soft: 0 10px 40px rgba(133, 111, 134, 0.08);
+            --tab-height: 80px; /* 底部导航高度 */
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            font-family: 'Noto Sans SC', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-main); 
+            height: 100vh; 
+            overflow: hidden; /* PC端保持不滚动，手机端由容器接管 */
+        }
+
+        /* 滚动条美化 */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #dcd0dc; border-radius: 3px; }
+
+        /* ============================
+           PC 端默认布局 (保持逻辑不变)
+           ============================ */
+        .container { 
+            max-width: 1800px; margin: 0 auto; display: grid; 
+            grid-template-columns: 360px 1fr; gap: 30px; height: 100%; padding: 24px;
+            transition: 0.3s;
+        }
+        
+        .panel { 
+            background: var(--glass-bg); border-radius: var(--radius); 
+            box-shadow: var(--shadow-soft); border: 1px solid rgba(255,255,255,0.6); 
+            display: flex; flex-direction: column; overflow: hidden; backdrop-filter: blur(12px);
+        }
+
+        /* 侧边栏 */
+        .sidebar { background: rgba(255, 255, 255, 0.9); }
+        .sidebar-header { padding: 30px; border-bottom: 1px solid var(--border-color); }
+        .app-title { font-size: 22px; font-weight: 700; color: var(--primary-color); }
+        .user-motto { font-size: 12px; color: var(--text-sub); margin-top: 8px; font-style: italic; }
+        .category-list { flex: 1; overflow-y: auto; padding: 25px; }
+        
+        /* 目标卡片 */
+        .goal-card { 
+            background: #fff; border-radius: 12px; padding: 14px 18px; margin-bottom: 12px; 
+            box-shadow: 0 2px 8px rgba(133, 111, 134, 0.05); transition: 0.3s; position: relative;
+        }
+        .goal-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(133, 111, 134, 0.1); }
+        .goal-card .progress-bg { height: 3px; background: #f0edf0; border-radius: 2px; margin-top: 8px; overflow: hidden; }
+        .goal-card .progress-fill { height: 100%; background: var(--accent-color); width: 0%; transition: width 0.6s; }
+        
+        /* 日历主区域 */
+        .main-header { padding: 25px 35px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(133, 111, 134, 0.05); }
+        .curr-month { font-size: 42px; font-weight: 300; color: var(--primary-color); letter-spacing: -1px; }
+        .calendar-body { flex: 1; padding: 30px 35px; overflow-y: auto; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 16px; }
+        .day-cell { 
+            background: rgba(255,255,255,0.7); border-radius: 14px; min-height: 130px; 
+            padding: 12px; display: flex; flex-direction: column; transition: 0.3s;
+            box-shadow: 0 4px 10px rgba(133, 111, 134, 0.03); 
+        }
+        .day-cell.today { background: #fff; border: 1px solid var(--accent-color); box-shadow: 0 0 0 4px var(--accent-soft); }
+        .task-dot { font-size: 11px; margin-bottom: 5px; padding: 4px 8px; border-radius: 6px; background: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+        .dot-priority { width: 6px; height: 6px; border-radius: 50%; background: #ddd; }
+        .dot-priority.p1 { background: var(--p1-color); } .dot-priority.p2 { background: var(--p2-color); }
+        
+        /* 弹窗通用 (PC模式) */
+        .modal-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(133, 111, 134, 0.15); backdrop-filter: blur(10px); 
+            z-index: 1000; display: flex; justify-content: center; align-items: center;
+            opacity: 0; visibility: hidden; transition: 0.3s;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .day-modal-window { width: 1000px; height: 90vh; background: #fff; border-radius: 20px; display: flex; overflow: hidden; box-shadow: 0 30px 80px rgba(133, 111, 134, 0.15); }
+        .modal-sidebar { width: 280px; background: #fdfafc; padding: 25px; border-right: 1px solid var(--border-color); overflow-y: auto; }
+        
+        /* 待办抽屉 (PC模式) */
+        .pending-drawer { position: fixed; top: 0; right: 0; width: 450px; height: 100%; background: #fff; box-shadow: -10px 0 40px rgba(133, 111, 134, 0.1); z-index: 1500; transform: translateX(100%); transition: 0.4s; display: flex; flex-direction: column; }
+        .pending-drawer.open { transform: translateX(0); }
+        
+        /* 底部导航 (默认隐藏，手机显示) */
+        .mobile-bottom-nav { display: none; }
+
+        /* ============================
+           📱 移动端重构逻辑 (Mobile Refactor)
+           ============================ */
+        @media screen and (max-width: 768px) {
+            body { background: #fcfafa; padding: 0; padding-bottom: var(--tab-height); /* 给底部导航留位 */ }
+
+            /* 1. 底部导航栏 */
+            .mobile-bottom-nav {
+                display: flex; position: fixed; bottom: 0; left: 0; width: 100%; height: var(--tab-height);
+                background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px);
+                border-top: 1px solid rgba(133, 111, 134, 0.1); z-index: 5000;
+                justify-content: space-around; align-items: center; padding-bottom: 15px; /* 适配全面屏底部 */
+                box-shadow: 0 -5px 20px rgba(133, 111, 134, 0.05);
+            }
+            .nav-item {
+                display: flex; flex-direction: column; align-items: center; gap: 4px;
+                color: #bab0ba; font-size: 10px; font-weight: 500; cursor: pointer; transition: 0.2s; flex: 1;
+            }
+            .nav-item i { font-size: 20px; margin-bottom: 2px; transition: 0.2s; }
+            .nav-item.active { color: var(--primary-color); }
+            .nav-item.active i { transform: translateY(-3px); color: var(--accent-color); }
+
+            /* 2. 首页 (Tab 1): 整合 Sidebar 和 Calendar */
+            .container {
+                display: block; /* 取消 grid */
+                height: auto; min-height: 100vh;
+                padding: 15px; padding-top: 20px;
+                overflow-y: auto;
+            }
+            
+            /* 隐藏 PC 端不需要的元素 */
+            .sidebar-header, .add-btn-dashed, .main-header .icon-btn { display: none !important; }
+            
+            /* 改造 Goal 区域 */
+            .sidebar { 
+                background: transparent; box-shadow: none; border: none; backdrop-filter: none;
+                height: auto; margin-bottom: 20px;
+            }
+            .category-list { padding: 0; overflow: visible; }
+            .category-header { font-size: 14px; margin-bottom: 10px; color: var(--primary-color); font-weight: 700; opacity: 1; }
+            
+            /* 改造 Calendar 区域 */
+            .panel.main-panel { background: transparent; border: none; box-shadow: none; overflow: visible; }
+            .calendar-body { padding: 0; overflow: visible; }
+            .calendar-grid { gap: 8px; }
+            .day-cell { 
+                min-height: 85px; padding: 6px; border-radius: 10px; background: #fff; 
+                box-shadow: 0 2px 8px rgba(133,111,134,0.05);
+            }
+            .day-num { font-size: 14px; color: #999; }
+            .task-dot { font-size: 9px; padding: 2px 4px; height: 16px; }
+
+            /* 首页头部 (手机版) */
+            .mobile-header {
+                display: flex !important; justify-content: space-between; align-items: flex-end;
+                margin-bottom: 20px; padding: 0 5px;
+            }
+            .mobile-title { font-size: 24px; font-weight: 700; color: var(--primary-color); }
+            .mobile-date { font-size: 14px; color: var(--accent-color); letter-spacing: 1px; }
+
+            /* 3. 每日计划 (Tab 2): 改造 Modal 为全屏页面 */
+            /* 当处于 Tab 2 时，强制显示 Day Modal */
+            body[data-active-tab="2"] .modal-overlay#dayModalOverlay {
+                opacity: 1; visibility: visible; position: fixed; z-index: 100;
+                background: #fcfafa; padding-bottom: var(--tab-height); /* 避开底部导航 */
+            }
+            body[data-active-tab="2"] .day-modal-window {
+                width: 100%; height: 100%; border-radius: 0; box-shadow: none;
+                flex-direction: column; background: transparent;
+            }
+            /* 隐藏 Modal 的关闭按钮和 Sidebar */
+            body[data-active-tab="2"] .modal-sidebar { display: none; }
+            body[data-active-tab="2"] .close-icon { display: none; } 
+            
+            /* 优化每日内容显示 */
+            .day-modal-window > div:last-child { padding: 20px; }
+            .modal-title { font-size: 28px; margin-bottom: 5px; }
+            .input-wrapper-v8 { box-shadow: 0 5px 20px rgba(133,111,134,0.05); border: 1px solid #f0edf0; }
+            
+            /* 4. 待办中心 (Tab 3): 改造 Drawer 为全屏页面 */
+            body[data-active-tab="3"] .pending-drawer {
+                transform: translateX(0); width: 100%; z-index: 100;
+                padding-bottom: var(--tab-height); border-left: none; box-shadow: none;
+            }
+            body[data-active-tab="3"] .close-icon { display: none; }
+            
+            /* 交互状态控制 */
+            /* 默认隐藏 Tab 2 和 Tab 3 的容器 */
+            body[data-active-tab="1"] #dayModalOverlay, 
+            body[data-active-tab="1"] #pendingDrawer { visibility: hidden; opacity: 0; transform: translateX(100%); }
+            
+            body[data-active-tab="2"] .container, 
+            body[data-active-tab="3"] .container { display: none; } /* 隐藏首页 */
+
+            /* 备份按钮优化 */
+            .backup-btn-mobile { margin-top: 20px; width: 100%; padding: 15px; border: 1px solid var(--primary-color); border-radius: 12px; color: var(--primary-color); background: #fff; display: flex; justify-content: center; gap: 8px; font-weight: 500; }
+        }
+
+        /* PC端隐藏移动端特有元素 */
+        @media screen and (min-width: 769px) {
+            .mobile-header { display: none; }
+            .backup-btn-mobile { display: none; }
+        }
+    </style>
+    <style>
+        .add-btn-dashed { width: 100%; border: 1px dashed #dcd0dc; background: transparent; padding: 10px; color: var(--text-sub); border-radius: 10px; cursor: pointer; font-size: 13px; }
+        .input-wrapper-v8 { background: #fff; border: 1px solid #f0edf0; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+        .input-top-row { display: flex; justify-content: space-between; align-items: center; height: 32px; }
+        .input-main-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .main-input { flex: 1; border: none; background: transparent; font-size: 15px; min-width: 120px; }
+        .send-btn { width: 38px; height: 38px; background: var(--primary-color); color: #fff; border-radius: 10px; border: none; display: flex; justify-content: center; align-items: center; }
+        .tool-btn { width: 34px; height: 34px; border-radius: 8px; display: flex; justify-content: center; align-items: center; color: #bab0ba; }
+        .tool-btn.active-red { background: var(--danger-bg); color: var(--p1-color); }
+        .tool-btn.active-purple { background: var(--accent-soft); color: var(--accent-color); }
+        #dayTaskDDL { display: none; border: 1px solid #ddd; padding: 4px; font-size: 12px; margin-left: 5px; }
+        #dayTaskDDL.show { display: block; }
+        .check-circle { width: 20px; height: 20px; border: 2px solid #dcd0dc; border-radius: 50%; margin-right: 15px; position: relative; }
+        .check-circle.checked { background: var(--success-color); border-color: var(--success-color); }
+        .check-circle.checked::after { content: '✓'; color: #fff; position: absolute; left: 4px; top: -1px; font-size: 12px; }
+        .task-row { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f9f6f9; }
+        .pending-header { padding: 30px; border-bottom: 1px solid #f0edf0; background: #fdfafc; display: flex; justify-content: space-between; align-items: center; }
+        .pending-card { background: #fff; padding: 15px; border-radius: 10px; margin-bottom: 10px; border-left: 4px solid transparent; display: flex; justify-content: space-between; border: 1px solid #f9f6f9; }
+        .pending-card.normal { border-left-color: var(--accent-color); }
+        .pending-card.urgent { border-left-color: var(--p1-color); background: #fffcfc; }
+        
+        /* 弹窗, Toast, Dialog 等 */
+        .toast { position: fixed; top: 30px; left: 50%; transform: translateX(-50%); background: rgba(94, 82, 94, 0.9); color: #fff; padding: 12px 24px; border-radius: 40px; font-size: 13px; z-index: 6000; opacity: 0; pointer-events: none; transition: 0.3s; }
+        .toast.show { top: 50px; opacity: 1; }
+        .custom-dialog-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.6); backdrop-filter: blur(5px); z-index: 7000; display: none; justify-content: center; align-items: center; }
+        .custom-dialog { background: #fff; padding: 30px; border-radius: 16px; width: 90%; max-width: 340px; box-shadow: 0 20px 60px rgba(133, 111, 134, 0.15); border: 1px solid #f0edf0; }
+        .dialog-btns { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+        .dialog-btn { padding: 10px 20px; border-radius: 8px; border: none; font-size: 13px; }
+        .btn-confirm { background: var(--primary-color); color: #fff; }
+        .btn-danger { background: var(--p1-color); color: #fff; }
+        .dialog-input { width: 100%; padding: 12px; border: 1px solid #f0edf0; background: #fdfafc; border-radius: 8px; outline: none; }
+        
+        /* 目标详情 */
+        .goal-modal-window { width: 900px; height: 85vh; background: #fff; border-radius: 20px; display: flex; flex-direction: column; box-shadow: 0 30px 80px rgba(133, 111, 134, 0.2); position:fixed; z-index:2000; left:50%; top:50%; transform:translate(-50%, -50%); visibility:hidden; opacity:0; transition:0.3s; }
+        .modal-overlay.active .goal-modal-window { visibility:visible; opacity:1; }
+        .goal-content-grid { display: grid; grid-template-columns: 1fr 360px; height: 100%; overflow: hidden; }
+        .goal-task-list-area { padding: 30px; overflow-y: auto; border-right: 1px solid #f0edf0; }
+        .goal-sidebar-area { background: #fdfafc; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+        @media screen and (max-width: 768px) {
+            .goal-modal-window { width: 95%; height: 90vh; grid-template-columns: 1fr; }
+            .goal-content-grid { grid-template-columns: 1fr; }
+            .goal-task-list-area { height: 50%; }
+            .goal-sidebar-area { height: 50%; border-top: 1px solid #ddd; }
+        }
+    </style>
+</head>
+<body data-active-tab="1"> <nav class="mobile-bottom-nav">
+        <div class="nav-item active" onclick="switchTab(1)">
+            <i class="fas fa-chart-simple"></i>
+            <span>概览</span>
+        </div>
+        <div class="nav-item" onclick="switchTab(2)">
+            <i class="fas fa-calendar-check"></i>
+            <span>今日</span>
+        </div>
+        <div class="nav-item" onclick="switchTab(3)">
+            <i class="fas fa-inbox"></i>
+            <span>待办</span>
+        </div>
+    </nav>
+
+    <div class="custom-dialog-overlay" id="dataModalOverlay">
+        <div class="custom-dialog">
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px; font-weight:700; color:var(--primary-color);">
+                <span>💾 数据安全</span>
+                <i class="fas fa-times" onclick="document.getElementById('dataModalOverlay').style.display='none'"></i>
+            </div>
+            <textarea id="dataTextarea" class="dialog-input" rows="6" style="resize:none; font-family:monospace; font-size:12px;" placeholder="数据代码..."></textarea>
+            <div class="dialog-btns">
+                <button class="dialog-btn btn-confirm" onclick="exportData()">复制备份</button>
+                <button class="dialog-btn btn-danger" onclick="importData()">导入恢复</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toastMsg">消息提示</div>
+    <div class="custom-dialog-overlay" id="customDialog">
+        <div class="custom-dialog">
+            <div id="dialogTitle" style="font-weight:700; color:var(--primary-color); margin-bottom:15px;">标题</div>
+            <input type="text" id="dialogInput" class="dialog-input">
+            <div class="dialog-btns">
+                <button class="dialog-btn" onclick="closeCustomDialog()" style="background:#f0edf0; color:#999;">取消</button>
+                <button class="dialog-btn btn-confirm" id="dialogConfirmBtn">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="goalModalOverlay">
+        <div class="goal-modal-window">
+            <div class="pending-header" style="padding:20px;">
+                <div style="font-size:18px; font-weight:700; color:var(--primary-color);" id="goalModalTitle">目标详情</div>
+                <i class="fas fa-times" onclick="closeGoalModal()" style="font-size:20px; color:#999;"></i>
+            </div>
+            <div class="goal-content-grid">
+                <div class="goal-task-list-area">
+                    <h3 style="font-size:14px; color:#999; margin-bottom:15px;">关联任务记录</h3>
+                    <div id="goalTaskList"></div>
+                </div>
+                <div class="goal-sidebar-area">
+                    <div style="background:#fff; padding:15px; border-radius:12px; border:1px solid #f0edf0;">
+                        <div style="display:flex; justify-content:space-between; font-size:12px; color:#999; margin-bottom:5px;"><span>进度</span><span id="statPercent" style="color:var(--accent-color); font-weight:700;">0%</span></div>
+                        <div style="height:6px; background:#f0edf0; border-radius:3px; overflow:hidden;"><div id="statBar" style="height:100%; background:var(--accent-color); width:0%;"></div></div>
+                    </div>
+                    <div style="padding:15px; background:#fff; border-radius:12px; border:1px solid #f0edf0;">
+                        <div style="font-weight:700; color:var(--primary-color); margin-bottom:10px;">快速生成</div>
+                        <input type="text" id="batchTaskName" class="dialog-input" placeholder="任务名..." style="margin-bottom:10px;">
+                        <button class="dialog-btn btn-confirm" style="width:100%;" onclick="runBatchGenerateSimple()">生成本月任务 (简化版)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="pending-drawer" id="pendingDrawer">
+        <div class="pending-header">
+            <div>
+                <h2 style="color:var(--primary-color); margin:0; font-size:20px;"><i class="fas fa-inbox" style="color:var(--accent-color); margin-right:10px;"></i>待办中心</h2>
+                <div style="font-size:12px; color:#999; margin-top:5px;">Inbox Collection</div>
+            </div>
+            <i class="fas fa-times close-icon" onclick="togglePendingDrawer()" style="font-size:20px;"></i>
+        </div>
+        <div style="padding:20px; background:#fff; border-bottom:1px solid #f0edf0; display:flex; gap:10px;">
+            <input type="text" id="inboxInput" class="main-input" style="background:#f9f6f9; padding:0 10px; border-radius:8px;" placeholder="添加新待办..." onkeypress="if(event.key==='Enter') addInboxTask()">
+            <button class="send-btn" onclick="addInboxTask()"><i class="fas fa-plus"></i></button>
+        </div>
+        <div style="flex:1; overflow-y:auto; padding:20px;">
+            <div id="pendingUrgentList"></div>
+            <div id="pendingNormalList"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="mobile-header">
+            <div>
+                <div class="mobile-title">Life OS</div>
+                <div class="mobile-date" id="mobileHeaderDate">2025 Dec</div>
+            </div>
+            <div style="width:36px; height:36px; border-radius:50%; background:#fff; display:flex; justify-content:center; align-items:center; box-shadow:0 2px 10px rgba(0,0,0,0.05);" onclick="openDataModal()">
+                <i class="fas fa-database" style="color:var(--primary-color); font-size:14px;"></i>
+            </div>
+        </div>
+
+        <aside class="panel sidebar">
+            <div class="sidebar-header">
+                <div class="app-title" contenteditable="true" id="appTitle">Life OS V9.0</div>
+                <div class="user-motto" contenteditable="true" id="userMotto">Think Big.</div>
+            </div>
+            <div class="category-list" id="categoryContainer"></div>
+            <div style="padding:20px; border-top:1px solid #f0edf0;" class="pc-only-actions">
+                <button class="add-btn-dashed" onclick="promptCategory()">+ 新增分区</button>
+                <button class="add-btn-dashed" onclick="openDataModal()" style="margin-top:10px; color:var(--primary-color); border-color:rgba(133,111,134,0.3);"><i class="fas fa-database"></i> 备份数据</button>
+            </div>
+        </aside>
+
+        <main class="panel main-panel">
+            <div class="main-header">
+                <div style="display:flex; align-items:baseline; gap:10px;">
+                    <span class="curr-month" id="displayMonth">12</span>
+                    <span class="curr-year" id="displayYear">2025</span>
+                </div>
+                <div>
+                    <i class="fas fa-chevron-left" style="margin-right:15px; cursor:pointer; color:#999;" onclick="changeMonth(-1)"></i>
+                    <i class="fas fa-chevron-right" style="cursor:pointer; color:#999;" onclick="changeMonth(1)"></i>
+                </div>
+                <div class="header-actions">
+                    <div class="icon-btn" onclick="togglePendingDrawer()"><i class="fas fa-inbox"></i><div class="badge" id="pendingCount">0</div></div>
+                </div>
+            </div>
+            <div class="calendar-body">
+                <div class="calendar-grid" id="calendarGrid"></div>
+            </div>
+        </main>
+        
+        <button class="backup-btn-mobile" onclick="openDataModal()">
+            <i class="fas fa-database"></i> 数据安全中心 (备份/恢复)
+        </button>
+    </div>
+
+    <div class="modal-overlay" id="dayModalOverlay">
+        <div class="day-modal-window">
+            <div class="modal-sidebar" id="dayModalSidebar"></div>
+            <div style="flex:1; display:flex; flex-direction:column; background:#fff;">
+                <div class="pending-header" style="background:#fff; border-bottom:none; padding-bottom:10px;">
+                    <div class="modal-title" id="dayModalTitle" style="font-size:24px; color:var(--primary-color); font-weight:700;">Date</div>
+                    <i class="fas fa-times close-icon" onclick="closeDayModal()" style="font-size:20px; cursor:pointer;"></i>
+                </div>
+                
+                <div style="flex:1; overflow-y:auto; padding:0 20px;" id="dayTaskList"></div>
+                
+                <div style="padding:20px; background:#fff; border-top:1px solid #f9f6f9;">
+                    <div class="input-wrapper-v8">
+                        <div class="input-top-row">
+                            <div id="linkStatusText" style="font-size:12px; color:#999;"><i class="fas fa-unlink"></i> 未关联</div>
+                            <select id="dayPrioritySelect" style="border:none; background:transparent; font-size:12px; color:#666;">
+                                <option value="0">默认 (P0)</option>
+                                <option value="1">高优 (P1)</option>
+                                <option value="2">中优 (P2)</option>
+                            </select>
+                        </div>
+                        <div class="input-main-row">
+                            <div class="tool-btn" id="ddlToggleBtn" onclick="toggleDDL()"><i class="far fa-clock"></i></div>
+                            <input type="datetime-local" id="dayTaskDDL">
+                            <div class="tool-btn" id="inboxToggleBtn" onclick="toggleInbox()"><i class="fas fa-inbox"></i></div>
+                            <input type="text" id="dayTaskInput" class="main-input" placeholder="输入今日任务..." onkeypress="handleDayEnter(event)">
+                            <button class="send-btn" onclick="addDayTask()"><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+                    <textarea id="dayMemo" rows="2" style="width:100%; border:none; background:#fdfafc; padding:10px; border-radius:10px; margin-top:15px; font-size:13px;" placeholder="每日感悟..." onblur="saveMemo()"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DB_KEY = 'life_os_mobile_pro_db';
+        let store = { categories: [{id:1,name:'工作'},{id:2,name:'生活'}], goals:[], tasks:[], config:{title:'Life OS', motto:'Think Big'} };
+        let viewYear = new Date().getFullYear(), viewMonth = new Date().getMonth();
+        let selectedDate = null, currentLinkGoalId = null, activeGoalId = null;
+        let isDDLEnabled = false, isInboxEnabled = false;
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            refreshUI();
+            updateMobileHeader();
+            // 手机端默认进入 Tab 1
+            if(window.innerWidth <= 768) switchTab(1);
+        });
+
+        // ================= Tab 切换逻辑 (手机端核心) =================
+        function switchTab(tabIndex) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item')[tabIndex-1].classList.add('active');
+            
+            // 设置 Body 状态，CSS 会根据这个状态显示/隐藏不同区域
+            document.body.setAttribute('data-active-tab', tabIndex);
+            
+            if (tabIndex === 2) {
+                // 如果切换到 "今日"，自动打开今天的 Modal
+                const today = new Date().toISOString().split('T')[0];
+                openDayModal(today); 
+            } else if (tabIndex === 3) {
+                // 如果切换到 "待办"，刷新待办列表
+                renderPendingLists();
+            } else {
+                // 切换回首页，关闭 Modal 避免冲突
+                document.getElementById('dayModalOverlay').classList.remove('active');
+            }
+        }
+
+        // ================= 基础逻辑 (保持原样) =================
+        function loadData() {
+            const raw = localStorage.getItem(DB_KEY);
+            if(raw) try{ store = JSON.parse(raw); }catch(e){}
+            document.getElementById('appTitle').innerText = store.config.title || "Life OS";
+            document.getElementById('userMotto').innerText = store.config.motto || "Think Big";
+        }
+        function saveData() { localStorage.setItem(DB_KEY, JSON.stringify(store)); refreshUI(); }
+        function refreshUI() { renderSidebar(); renderCalendar(); updatePendingCount(); updateMobileHeader(); }
+        
+        function updateMobileHeader() {
+            const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            document.getElementById('mobileHeaderDate').innerText = `${viewYear} ${months[viewMonth]}`;
+        }
+
+        // Sidebar / Goal Cards
+        function renderSidebar() {
+            const c = document.getElementById('categoryContainer'); c.innerHTML = '';
+            store.categories.forEach(cat => {
+                const goals = store.goals.filter(g=>g.catId===cat.id);
+                let html = '';
+                goals.forEach(g => {
+                     const s = getGoalStats(g.id);
+                     html += `<div class="goal-card" onclick="openGoalModal(${g.id})"><div style="display:flex;justify-content:space-between;font-size:14px;font-weight:500;"><span>${g.title}</span><i class="fas fa-trash" style="color:#ddd;" onclick="event.stopPropagation();deleteGoal(${g.id})"></i></div><div class="progress-bg"><div class="progress-fill" style="width:${s.percent}%"></div></div><div style="font-size:10px;color:#999;margin-top:4px;text-align:right;">${s.done}/${s.total}</div></div>`;
+                });
+                const div = document.createElement('div');
+                div.innerHTML = `<div class="category-header" style="display:flex;justify-content:space-between;"><span>${cat.name}</span><i class="fas fa-plus" onclick="promptGoal(${cat.id})"></i></div>${html}`;
+                div.style.marginBottom = '20px';
+                c.appendChild(div);
+            });
+        }
+        function getGoalStats(gid) { const t=store.tasks.filter(x=>x.linkGoalId===gid); const d=t.filter(x=>x.done).length; return {total:t.length, done:d, percent:t.length?Math.round(d/t.length*100):0}; }
+
+        // Calendar
+        function renderCalendar() {
+            document.getElementById('displayMonth').innerText = viewMonth+1; document.getElementById('displayYear').innerText = viewYear;
+            const grid = document.getElementById('calendarGrid'); grid.innerHTML = '';
+            const days = new Date(viewYear, viewMonth+1, 0).getDate();
+            const start = new Date(viewYear, viewMonth, 1).getDay();
+            const today = new Date().toISOString().split('T')[0];
+            
+            for(let i=0;i<start;i++) grid.appendChild(document.createElement('div'));
+            for(let d=1; d<=days; d++) {
+                const dateStr = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const tasks = store.tasks.filter(t=>t.date===dateStr && !t.isMemo);
+                let dots = '';
+                tasks.slice(0,3).forEach(t => dots += `<div class="task-dot ${t.done?'done':''}"><div class="dot-priority p${t.priority}"></div>${t.text}</div>`);
+                if(tasks.length>3) dots += `<div style="font-size:9px;color:#ccc;text-align:center;">+${tasks.length-3}</div>`;
+                
+                const cell = document.createElement('div');
+                cell.className = `day-cell ${dateStr===today?'today':''}`;
+                cell.innerHTML = `<div class="day-num">${d}</div><div style="flex:1;overflow:hidden;">${dots}</div>`;
+                cell.onclick = () => openDayModal(dateStr);
+                grid.appendChild(cell);
+            }
+        }
+        function changeMonth(d) { viewMonth+=d; if(viewMonth>11){viewMonth=0;viewYear++} if(viewMonth<0){viewMonth=11;viewYear--} refreshUI(); }
+
+        // Daily Modal (Now also Tab 2)
+        function openDayModal(dateStr) {
+            selectedDate = dateStr;
+            document.getElementById('dayModalTitle').innerText = dateStr;
+            currentLinkGoalId = null; isDDLEnabled = false; isInboxEnabled = false;
+            updateDDLUI(); updateInboxUI(); document.getElementById('linkStatusText').innerHTML = '<i class="fas fa-unlink"></i> 未关联';
+            renderDayTasks();
+            renderGoalSelector();
+            const m = store.tasks.find(t=>t.date===dateStr && t.isMemo);
+            document.getElementById('dayMemo').value = m?m.text:'';
+            document.getElementById('dayModalOverlay').classList.add('active');
+        }
+        function closeDayModal() { 
+            saveMemo(); 
+            // 如果是在 Tab 2 模式下，不应该只是移除 active，而是应该切换回 Tab 1
+            if(window.innerWidth <= 768 && document.body.getAttribute('data-active-tab') === '2') {
+                switchTab(1);
+            } else {
+                document.getElementById('dayModalOverlay').classList.remove('active'); 
+            }
+            saveData(); 
+        }
+        
+        function renderGoalSelector() {
+            const sb = document.getElementById('dayModalSidebar'); sb.innerHTML = '<div style="font-size:12px;color:#999;margin-bottom:10px;">关联目标:</div>';
+            store.categories.forEach(c => {
+                 store.goals.filter(g=>g.catId===c.id).forEach(g => {
+                     const d = document.createElement('div'); d.innerText = g.title; d.style.cssText="padding:8px;background:#fff;margin-bottom:5px;border-radius:6px;font-size:12px;cursor:pointer;";
+                     d.onclick = () => { currentLinkGoalId=g.id; document.getElementById('linkStatusText').innerText = '🔗 '+g.title; };
+                     sb.appendChild(d);
+                 });
+            });
+        }
+        
+        function renderDayTasks() {
+            const list = document.getElementById('dayTaskList'); list.innerHTML = '';
+            const tasks = store.tasks.filter(t=>t.date===selectedDate && !t.isMemo);
+            if(tasks.length===0) list.innerHTML = '<div style="text-align:center;color:#ddd;margin-top:40px;">暂无计划，添加一个吧~</div>';
+            tasks.forEach(t => {
+                let meta = ''; if(t.priority>0) meta+=`<span style="color:var(--p${t.priority}-color);margin-right:5px;">P${t.priority}</span>`;
+                if(t.ddl) meta+=`<span style="background:var(--danger-bg);color:var(--p1-color);padding:2px 4px;border-radius:4px;font-size:10px;">${t.ddl.split('T')[1]}</span>`;
+                list.innerHTML += `<div class="task-row"><div class="check-circle ${t.done?'checked':''}" onclick="toggleTask(${t.id})"></div><div style="flex:1"><div style="font-size:14px;text-decoration:${t.done?'line-through':''};color:${t.done?'#ccc':'#5e525e'}">${t.text}</div><div style="font-size:10px;color:#999;margin-top:2px;">${meta}</div></div><i class="fas fa-trash" style="color:#eee;" onclick="deleteTask(${t.id})"></i></div>`;
+            });
+        }
+        function addDayTask() {
+            const txt = document.getElementById('dayTaskInput').value.trim(); if(!txt) return;
+            store.tasks.push({id:Date.now(), date:selectedDate, text:txt, done:false, priority:document.getElementById('dayPrioritySelect').value, ddl:isDDLEnabled?document.getElementById('dayTaskDDL').value:null, linkGoalId:currentLinkGoalId, inInbox:isInboxEnabled});
+            document.getElementById('dayTaskInput').value = ''; renderDayTasks();
+        }
+        function handleDayEnter(e){ if(e.key==='Enter') addDayTask(); }
+        function toggleTask(id){ const t=store.tasks.find(x=>x.id===id); if(t){t.done=!t.done; renderDayTasks();} }
+        function deleteTask(id){ store.tasks=store.tasks.filter(x=>x.id!==id); renderDayTasks(); }
+        function saveMemo(){ store.tasks = store.tasks.filter(t=>!(t.date===selectedDate && t.isMemo)); const v = document.getElementById('dayMemo').value; if(v.trim()) store.tasks.push({id:Date.now(), date:selectedDate, text:v, isMemo:true, done:false, priority:0}); }
+        
+        // UI Toggles
+        function toggleDDL() { isDDLEnabled=!isDDLEnabled; document.getElementById('dayTaskDDL').classList.toggle('show'); document.getElementById('ddlToggleBtn').classList.toggle('active-red'); }
+        function toggleInbox() { isInboxEnabled=!isInboxEnabled; document.getElementById('inboxToggleBtn').classList.toggle('active-purple'); }
+
+        // Inbox & Drawer
+        function togglePendingDrawer() { document.getElementById('pendingDrawer').classList.toggle('open'); renderPendingLists(); }
+        function updatePendingCount() { document.getElementById('pendingCount').innerText = store.tasks.filter(t=>!t.done && t.inInbox).length; }
+        function renderPendingLists() {
+            const u = document.getElementById('pendingUrgentList'), n = document.getElementById('pendingNormalList'); u.innerHTML=''; n.innerHTML='';
+            const tasks = store.tasks.filter(t=>!t.done && t.inInbox);
+            if(tasks.length===0) u.innerHTML='<div style="text-align:center;color:#ddd;margin-top:20px;">待办箱是空的</div>';
+            tasks.forEach(t => {
+                const html = `<div class="pending-card ${t.priority==1?'urgent':'normal'}"><div style="font-weight:500;font-size:14px;">${t.text}</div><i class="fas fa-check" style="color:var(--success-color);" onclick="completeInboxTask(${t.id})"></i></div>`;
+                if(t.priority==1) u.innerHTML+=html; else n.innerHTML+=html;
+            });
+        }
+        function addInboxTask() {
+            const v = document.getElementById('inboxInput').value.trim(); if(!v) return;
+            store.tasks.push({id:Date.now(), date:new Date().toISOString().split('T')[0], text:v, done:false, priority:0, inInbox:true});
+            document.getElementById('inboxInput').value=''; saveData(); renderPendingLists();
+        }
+        function completeInboxTask(id) { const t=store.tasks.find(x=>x.id===id); if(t){t.done=true; saveData(); renderPendingLists();} }
+
+        // Goal Modal
+        function openGoalModal(gid) { activeGoalId=gid; document.getElementById('goalModalTitle').innerText = store.goals.find(g=>g.id===gid).title; renderGoalStatsInner(gid); document.getElementById('goalModalOverlay').classList.add('active'); }
+        function closeGoalModal() { document.getElementById('goalModalOverlay').classList.remove('active'); saveData(); }
+        function renderGoalStatsInner(gid) {
+            const list = document.getElementById('goalTaskList'); list.innerHTML='';
+            const tasks = store.tasks.filter(t=>t.linkGoalId===gid);
+            tasks.forEach(t => list.innerHTML+=`<div style="padding:10px;border-bottom:1px solid #f9f6f9;font-size:12px;">${t.text} <span style="color:#ccc;">${t.date}</span></div>`);
+            const s = getGoalStats(gid);
+            document.getElementById('statPercent').innerText = s.percent+'%'; document.getElementById('statBar').style.width = s.percent+'%';
+        }
+        // 简化版批量生成 (保留核心功能，去除复杂日历选择以适应手机)
+        function runBatchGenerateSimple() {
+            const name = document.getElementById('batchTaskName').value.trim(); if(!name) return;
+            const days = new Date(viewYear, viewMonth+1, 0).getDate();
+            for(let d=1; d<=days; d++) {
+                if(d%2===0) { // 简单逻辑：每隔一天
+                   const date = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                   store.tasks.push({id:Date.now()+d, date:date, text:name, done:false, priority:0, linkGoalId:activeGoalId});
+                }
+            }
+            alert('已生成本月双号日的任务'); closeGoalModal();
+        }
+
+        // Data Backup
+        function openDataModal() { document.getElementById('dataModalOverlay').style.display='flex'; document.getElementById('dataTextarea').value = JSON.stringify(store); }
+        function exportData() { document.getElementById('dataTextarea').select(); document.execCommand('copy'); showToast('已复制'); }
+        function importData() { try{ const d = JSON.parse(document.getElementById('dataTextarea').value); if(d.tasks){ store=d; saveData(); location.reload(); } }catch(e){ alert('数据格式错误'); } }
+        function showToast(m) { const t=document.getElementById('toastMsg'); t.innerText=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); }
+
+        // Helpers
+        function promptCategory() { const n=prompt("分区名称:"); if(n) { store.categories.push({id:Date.now(), name:n}); saveData(); } }
+        function promptGoal(cid) { const n=prompt("目标名称:"); if(n) { store.goals.push({id:Date.now(), catId:cid, title:n}); saveData(); } }
+        function deleteGoal(id) { if(confirm("删除目标?")) { store.goals=store.goals.filter(g=>g.id!==id); saveData(); } }
+        function closeCustomDialog() { document.getElementById('customDialog').style.display='none'; }
+    </script>
+</body>
+</html>
